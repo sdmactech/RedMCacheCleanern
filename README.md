@@ -10,9 +10,25 @@
 
 <p align="center">
   <a href="https://github.com/sdmactech/RedMCacheCleanern/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/sdmactech/RedMCacheCleanern?label=release&color=8f2d20"></a>
-  <a href="https://github.com/sdmactech/RedMCacheCleanern/releases/download/v1.0.0/RedM.Cache.Cleaner.App.zip"><img alt="Download ZIP" src="https://img.shields.io/badge/download-ZIP-f2e4cc?labelColor=4f1814"></a>
+  <a href="https://github.com/sdmactech/RedMCacheCleanern/releases/latest"><img alt="Download ZIP" src="https://img.shields.io/badge/download-ZIP-f2e4cc?labelColor=4f1814"></a>
   <img alt="Windows" src="https://img.shields.io/badge/platform-Windows-27221d?color=564533">
+  <img alt="Version 2.0" src="https://img.shields.io/badge/UI-v2.0-8f2d20">
 </p>
+
+---
+
+## What's new in 2.0
+
+Version 2.0 is a full visual redesign with the **exact same functionality** as before. The interface was rebuilt from WinForms to a modern **WPF** layout with a refined Red Dead / RedM western theme:
+
+- Frameless window with rounded corners, a drop shadow, and a leather-and-parchment palette
+- Redesigned header with a live "current user" status pill
+- Card-based layout for the target directory, cleanup options, and activity log
+- Folder names shown as tidy "chips," plus a custom-styled option toggle
+- Themed confirmation dialogs that match the app instead of the default gray Windows pop-ups
+- Same launchers, same script filename — nothing about installation or distribution changes
+
+Nothing about *what* the app does has changed: same target folder, same folders cleaned, same double-confirmation for `nui-storage`.
 
 ---
 
@@ -20,7 +36,7 @@
 
 Download the latest ZIP from the release page:
 
-**[Download RedM Cache Cleaner App.zip](https://github.com/sdmactech/RedMCacheCleanern/releases/download/v1.0.0/RedM.Cache.Cleaner.App.zip)**
+**[Download the latest release ZIP](https://github.com/sdmactech/RedMCacheCleanern/releases/latest)**
 
 If you want to view all releases, visit the **[Releases page](https://github.com/sdmactech/RedMCacheCleanern/releases)**.
 
@@ -43,7 +59,7 @@ It also includes an optional checkbox to delete:
 Because `nui-storage` can contain separate UI/browser storage data, the app asks for a **second confirmation** before deleting it.
 
 <p align="center">
-  <img src="assets/confirmation-flow.svg" alt="Separate confirmation prompts" width="900">
+  <img src="assets/confirmation-flow.svg" alt="Separate themed confirmation prompts" width="900">
 </p>
 
 ---
@@ -66,8 +82,8 @@ Because `nui-storage` can contain separate UI/browser storage data, the app asks
 | --- | --- |
 | `RedM Cache Cleaner.vbs` | Main double-click launcher. Opens the app without leaving a console window visible. |
 | `redm_cache_cleaner_w_background_windows.bat` | Fallback launcher. Use this if the VBS launcher does not work on your computer. |
-| `support_redm_cleaner_Gps1.ps1` | The PowerShell WinForms GUI app. Keep this in the same folder as the launchers. |
-| `support_cleanup_universal.bat` | Universal batch fallback/support script. |
+| `support_redm_cleaner_Gps1.ps1` | The PowerShell **WPF** GUI app (v2.0). Keep this in the same folder as the launchers. |
+| `support_cleanup_universal.bat` | Universal batch fallback/support script (console-based). |
 | `README.txt` | Simple offline instructions included with the ZIP. |
 
 ---

@@ -1,50 +1,102 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="820" viewBox="0 0 1280 820" role="img" aria-label="RedM Cache Cleaner app preview">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="920" viewBox="0 0 1280 920" role="img" aria-label="RedM Cache Cleaner v2 app preview">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1b1612"/>
-      <stop offset="1" stop-color="#090807"/>
+    <linearGradient id="desk" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#171310"/>
+      <stop offset="1" stop-color="#080706"/>
     </linearGradient>
-    <linearGradient id="header" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#651d18"/>
-      <stop offset="1" stop-color="#2f1110"/>
+    <linearGradient id="win" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#1B1613"/>
+      <stop offset="1" stop-color="#12100E"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000000" flood-opacity="0.42"/>
+    <linearGradient id="hdr" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="#5E211B"/>
+      <stop offset="1" stop-color="#3A1512"/>
+    </linearGradient>
+    <linearGradient id="btn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A6392A"/>
+      <stop offset="1" stop-color="#7E271D"/>
+    </linearGradient>
+    <linearGradient id="emb" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A6392A"/>
+      <stop offset="1" stop-color="#7E271D"/>
+    </linearGradient>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="26" flood-color="#000000" flood-opacity="0.65"/>
     </filter>
+    <clipPath id="winclip"><rect x="214" y="60" width="852" height="800" rx="18"/></clipPath>
   </defs>
-  <rect width="1280" height="820" fill="url(#bg)"/>
-  <circle cx="1080" cy="125" r="280" fill="#8f2d20" opacity="0.10"/>
-  <circle cx="170" cy="760" r="340" fill="#c49a5c" opacity="0.05"/>
 
-  <rect x="210" y="88" width="860" height="644" rx="16" fill="#12100e" filter="url(#shadow)"/>
-  <rect x="214" y="92" width="852" height="636" rx="13" fill="#1e1a16" stroke="#564533" stroke-width="2"/>
-  <rect x="214" y="92" width="852" height="138" rx="13" fill="url(#header)"/>
-  <rect x="214" y="222" width="852" height="8" fill="#301210"/>
+  <rect width="1280" height="920" fill="url(#desk)"/>
 
-  <text x="252" y="158" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="700" fill="#f2e4cc">RedM Cache Cleaner</text>
-  <text x="256" y="198" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#e0ccac">Clean RedM cache files safely for the current Windows user.</text>
+  <!-- window -->
+  <g filter="url(#sh)">
+    <rect x="214" y="60" width="852" height="800" rx="18" fill="url(#win)" stroke="#8A6E4A" stroke-width="1.5"/>
+  </g>
+  <g clip-path="url(#winclip)">
 
-  <rect x="842" y="120" width="168" height="34" rx="6" fill="#301210"/>
-  <text x="926" y="142" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#f2e4cc">USER: PLAYER</text>
-  <text x="1010" y="180" text-anchor="end" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#e0ccac">Built by Slimm</text>
+    <!-- title bar -->
+    <rect x="240" y="75" width="24" height="24" rx="6" fill="url(#emb)" stroke="#8A6E4A"/>
+    <text x="252" y="92" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700" fill="#F2E4CC" text-anchor="middle">R</text>
+    <text x="276" y="92" font-family="Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#B29A78">RedM Cache Cleaner</text>
+    <rect x="980" y="72" width="38" height="30" rx="6" fill="#ffffff" opacity="0.06"/>
+    <text x="999" y="93" font-family="Segoe UI, sans-serif" font-size="16" fill="#E0CCAC" text-anchor="middle">&#8211;</text>
+    <text x="1042" y="92" font-family="Segoe UI, sans-serif" font-size="13" fill="#E0CCAC" text-anchor="middle">&#10005;</text>
 
-  <rect x="252" y="270" width="776" height="106" rx="8" fill="#1e1a16" stroke="#564533"/>
-  <text x="282" y="312" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#f2e4cc">Target Directory</text>
-  <text x="282" y="348" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#c2ab8a">C:\Users\Player\AppData\Local\RedM\RedM.app\data</text>
+    <!-- header band -->
+    <rect x="215" y="112" width="850" height="124" fill="url(#hdr)"/>
+    <rect x="215" y="233" width="850" height="3" fill="#2A0F0C"/>
+    <text x="246" y="170" font-family="Segoe UI, sans-serif" font-size="34" font-weight="700" fill="#F2E4CC">RedM Cache Cleaner</text>
+    <text x="248" y="202" font-family="Segoe UI, sans-serif" font-size="15" fill="#E0CCAC">Clean RedM cache files safely for the current Windows user.</text>
+    <!-- user pill -->
+    <rect x="856" y="146" width="180" height="34" rx="17" fill="#3A1512" stroke="#8A6E4A"/>
+    <circle cx="878" cy="163" r="4.5" fill="#7BC96F"/>
+    <text x="892" y="168" font-family="Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#F2E4CC">USER: Slimm</text>
+    <text x="1036" y="200" font-family="Segoe UI, sans-serif" font-size="11" fill="#E0CCAC" text-anchor="end" opacity="0.85">Built by Slimm</text>
 
-  <rect x="252" y="400" width="776" height="134" rx="8" fill="#1e1a16" stroke="#564533"/>
-  <text x="282" y="442" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#f2e4cc">Cleanup Options</text>
-  <text x="282" y="478" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#e0ccac">The following folders will be deleted after confirmation: cache, server-cache, server-cache-priv</text>
-  <rect x="282" y="500" width="18" height="18" rx="3" fill="#12100e" stroke="#8f2d20" stroke-width="2"/>
-  <text x="314" y="516" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#f2e4cc">Also delete nui-storage</text>
+    <!-- target directory card -->
+    <rect x="244" y="262" width="792" height="98" rx="10" fill="#241F1A" stroke="#4A3B2C"/>
+    <text x="266" y="290" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#F2E4CC">TARGET DIRECTORY</text>
+    <rect x="266" y="302" width="748" height="40" rx="6" fill="#0C0A09" stroke="#4A3B2C"/>
+    <text x="280" y="327" font-family="Consolas, monospace" font-size="13.5" fill="#DBC59E">C:\Users\Slimm\AppData\Local\RedM\RedM.app\data</text>
 
-  <rect x="252" y="562" width="205" height="52" rx="8" fill="#8f2d20" stroke="#564533"/>
-  <text x="354" y="595" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#f2e4cc">Clean RedM Cache</text>
-  <rect x="476" y="562" width="195" height="52" rx="8" fill="#27221d" stroke="#564533"/>
-  <text x="574" y="595" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#f2e4cc">Open RedM Folder</text>
-  <rect x="690" y="562" width="118" height="52" rx="8" fill="#27221d" stroke="#564533"/>
-  <text x="749" y="595" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#f2e4cc">Exit</text>
+    <!-- options card -->
+    <rect x="244" y="376" width="792" height="196" rx="10" fill="#241F1A" stroke="#4A3B2C"/>
+    <text x="266" y="404" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#F2E4CC">CLEANUP OPTIONS</text>
+    <text x="266" y="430" font-family="Segoe UI, sans-serif" font-size="13.5" fill="#E0CCAC">After you confirm, these folders are deleted:</text>
+    <!-- chips -->
+    <rect x="266" y="444" width="86" height="30" rx="6" fill="#2E2822" stroke="#4A3B2C"/>
+    <text x="309" y="464" font-family="Consolas, monospace" font-size="12.5" fill="#E0CCAC" text-anchor="middle">cache</text>
+    <rect x="362" y="444" width="140" height="30" rx="6" fill="#2E2822" stroke="#4A3B2C"/>
+    <text x="432" y="464" font-family="Consolas, monospace" font-size="12.5" fill="#E0CCAC" text-anchor="middle">server-cache</text>
+    <rect x="512" y="444" width="176" height="30" rx="6" fill="#2E2822" stroke="#4A3B2C"/>
+    <text x="600" y="464" font-family="Consolas, monospace" font-size="12.5" fill="#E0CCAC" text-anchor="middle">server-cache-priv</text>
+    <!-- divider -->
+    <rect x="266" y="494" width="748" height="1" fill="#4A3B2C"/>
+    <!-- checkbox -->
+    <rect x="266" y="510" width="22" height="22" rx="5" fill="#241F1A" stroke="#8A6E4A"/>
+    <text x="298" y="527" font-family="Segoe UI, sans-serif" font-size="14" fill="#F2E4CC">Also delete nui-storage</text>
+    <text x="298" y="552" font-family="Segoe UI, sans-serif" font-size="12" fill="#B29A78">nui-storage can hold separate UI / browser data. You'll be asked to confirm this one separately.</text>
 
-  <rect x="252" y="638" width="776" height="62" rx="8" fill="#1e1a16" stroke="#564533"/>
-  <text x="282" y="674" font-family="Consolas, monospace" font-size="15" fill="#dbc59e">[12:00:00] Ready. Running as Windows user: PLAYER</text>
+    <!-- action buttons -->
+    <rect x="244" y="588" width="440" height="52" rx="8" fill="url(#btn)" stroke="#8A6E4A"/>
+    <text x="464" y="620" font-family="Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#F2E4CC" text-anchor="middle">Clean RedM Cache</text>
+    <rect x="696" y="588" width="170" height="52" rx="8" fill="#2E2822" stroke="#4A3B2C"/>
+    <text x="781" y="620" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700" fill="#E0CCAC" text-anchor="middle">Open Folder</text>
+    <rect x="878" y="588" width="158" height="52" rx="8" fill="#2E2822" stroke="#4A3B2C"/>
+    <text x="957" y="620" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700" fill="#E0CCAC" text-anchor="middle">Exit</text>
+
+    <!-- activity log card -->
+    <rect x="244" y="656" width="792" height="150" rx="10" fill="#241F1A" stroke="#4A3B2C"/>
+    <text x="266" y="684" font-family="Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#F2E4CC">ACTIVITY LOG</text>
+    <rect x="266" y="696" width="748" height="94" rx="6" fill="#0C0A09" stroke="#4A3B2C"/>
+    <text x="282" y="722" font-family="Consolas, monospace" font-size="12.5" fill="#DBC59E">[10:42:01] Ready. Running as Windows user: Slimm</text>
+    <text x="282" y="744" font-family="Consolas, monospace" font-size="12.5" fill="#DBC59E">[10:42:01] Target directory: C:\Users\Slimm\AppData\Local\RedM\RedM.app\data</text>
+    <text x="282" y="766" font-family="Consolas, monospace" font-size="12.5" fill="#9C8560">_</text>
+
+    <!-- footer -->
+    <rect x="215" y="824" width="850" height="36" fill="#0E0C0A"/>
+    <text x="246" y="847" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#B29A78" opacity="0.7">RedM Cache Cleaner</text>
+    <text x="1036" y="847" font-family="Segoe UI, sans-serif" font-size="11.5" fill="#B29A78" text-anchor="end" opacity="0.7">v2.0  &#8226;  Built by Slimm</text>
+
+  </g>
 </svg>
