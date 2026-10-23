@@ -1,9 +1,12 @@
 <#
-    RedM Cache Cleaner  -  v2.0
-    Refined Red Dead / RedM western theme, rebuilt in WPF.
-    Same functionality as v1: cleans cache / server-cache / server-cache-priv
+    RedM Cache Cleaner  -  v3.0
+    Apple-style redesign in WPF: grouped layout, system type, light/dark that
+    follows the Windows app theme, eased motion, and a RedM red accent.
+    Same functionality as v1/v2: cleans cache / server-cache / server-cache-priv
     (after confirmation) with an optional second-confirmed nui-storage delete,
-    an "Open RedM Folder" action, and an activity log.
+    an "Open Folder" action, and an activity log.
+    v3.0 adds the app icon (header, window, taskbar) and a
+    "Create Desktop Shortcut" button.
 
     Original utility by Slimm.
 #>
@@ -17,74 +20,151 @@ Add-Type -AssemblyName System.Windows.Forms   # used only for DoEvents in the lo
 $script:TargetDir    = Join-Path $env:LOCALAPPDATA 'RedM\RedM.app\data'
 $script:CacheFolders = @('cache', 'server-cache', 'server-cache-priv')
 $script:NuiFolder    = 'nui-storage'
+$script:AppDir       = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+$script:IconIco      = Join-Path $script:AppDir 'RedM Cache Cleaner.ico'
+$script:IconPng      = Join-Path $script:AppDir 'RedM Cache Cleaner.png'
+$script:Launcher     = Join-Path $script:AppDir 'RedM Cache Cleaner.vbs'
+
+# ------------------------------------------------------------------ theme
+# Follow the Windows "app mode" setting (Settings > Personalization > Colors).
+$script:Dark = $false
+try {
+    $personalize = Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' -ErrorAction Stop
+    if ($personalize.AppsUseLightTheme -eq 0) { $script:Dark = $true }
+}
+catch { }
+
+# Honor "Animation effects" (Settings > Accessibility > Visual effects).
+# When it's off, fades stay but scaling and sliding are dropped.
+$script:Motion = [System.Windows.SystemParameters]::ClientAreaAnimation
+
+if ($script:Dark) {
+    $script:Palette = @{
+        Bg = '#1C1C1E'; Group = '#2C2C2E'; GroupBorder = '#14FFFFFF'; Hairline = '#33FFFFFF'
+        Separator = '#3A3A3C'; Label = '#F5F5F7'; Secondary = '#A1A1A6'; Tertiary = '#6E6E73'
+        Fill = '#3A3A3C'; FillHover = '#48484A'; FillPressed = '#2F2F31'
+        Accent = '#D84B38'; AccentHover = '#E25D4A'; AccentPressed = '#BC3F2D'
+        AccentTop = '#E8604C'; AccentBottom = '#B83A28'; FocusRing = '#99E0533F'
+        TrackOff = '#39393D'; Scrim = '#66000000'; Scroll = '#40FFFFFF'
+        Green = '#30D158'; CloseHover = '#E5484D'; ShadowOpacity = '0.55'
+    }
+}
+else {
+    $script:Palette = @{
+        Bg = '#F2F2F7'; Group = '#FFFFFF'; GroupBorder = '#0F000000'; Hairline = '#26000000'
+        Separator = '#E5E5EA'; Label = '#1D1D1F'; Secondary = '#6E6E73'; Tertiary = '#8E8E93'
+        Fill = '#E8E8ED'; FillHover = '#DEDEE3'; FillPressed = '#D1D1D6'
+        Accent = '#C0392B'; AccentHover = '#CD4637'; AccentPressed = '#A8301F'
+        AccentTop = '#D9493A'; AccentBottom = '#A8291D'; FocusRing = '#99C0392B'
+        TrackOff = '#E3E3E8'; Scrim = '#33000000'; Scroll = '#33000000'
+        Green = '#34C759'; CloseHover = '#E5484D'; ShadowOpacity = '0.22'
+    }
+}
+$script:Palette.Fast = if ($script:Motion) { '0:0:0.1' }  else { '0:0:0' }
+$script:Palette.Med  = if ($script:Motion) { '0:0:0.28' } else { '0:0:0' }
+
+function Expand-Theme {
+    param([string]$Text)
+    foreach ($key in $script:Palette.Keys) { $Text = $Text.Replace("@$key@", $script:Palette[$key]) }
+    return $Text
+}
+
+# Critically damped feel: fast start, long soft settle, no overshoot.
+$script:Ease = New-Object System.Windows.Media.Animation.ExponentialEase
+$script:Ease.EasingMode = 'EaseOut'
+$script:Ease.Exponent   = 6
+$script:Ease.Freeze()
 
 # ================================================================== MAIN XAML
 $xaml = @'
 <Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="RedM Cache Cleaner" Height="672" Width="720"
+    Title="RedM Cache Cleaner" Width="600" SizeToContent="Height"
     WindowStartupLocation="CenterScreen"
     WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-    ResizeMode="NoResize" FontFamily="Segoe UI">
+    ResizeMode="NoResize" FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">
 
   <Window.Resources>
-    <SolidColorBrush x:Key="Parchment"  Color="#F2E4CC"/>
-    <SolidColorBrush x:Key="TextSoft"   Color="#E0CCAC"/>
-    <SolidColorBrush x:Key="TextMuted"  Color="#B29A78"/>
-    <SolidColorBrush x:Key="Accent"     Color="#9A3326"/>
-    <SolidColorBrush x:Key="AccentHi"   Color="#B84234"/>
-    <SolidColorBrush x:Key="Gold"       Color="#8A6E4A"/>
-    <SolidColorBrush x:Key="GoldDim"    Color="#4A3B2C"/>
-    <SolidColorBrush x:Key="Surface"    Color="#241F1A"/>
-    <SolidColorBrush x:Key="Surface2"   Color="#2E2822"/>
-    <SolidColorBrush x:Key="LogBg"      Color="#0C0A09"/>
-    <SolidColorBrush x:Key="LogText"    Color="#DBC59E"/>
-
-    <Style x:Key="Card" TargetType="Border">
-      <Setter Property="Background" Value="{StaticResource Surface}"/>
-      <Setter Property="BorderBrush" Value="{StaticResource GoldDim}"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="10"/>
-      <Setter Property="Padding" Value="20,16"/>
-      <Setter Property="Margin" Value="0,0,0,14"/>
+    <Style x:Key="FocusRing">
+      <Setter Property="Control.Template">
+        <Setter.Value>
+          <ControlTemplate>
+            <Border Margin="-3" CornerRadius="14" BorderThickness="2" BorderBrush="@FocusRing@"/>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
     </Style>
 
-    <Style x:Key="CardHeading" TargetType="TextBlock">
-      <Setter Property="Foreground" Value="{StaticResource Parchment}"/>
-      <Setter Property="FontSize" Value="11"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Margin" Value="0,0,0,8"/>
+    <Style x:Key="Group" TargetType="Border">
+      <Setter Property="Background" Value="@Group@"/>
+      <Setter Property="BorderBrush" Value="@GroupBorder@"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="12"/>
+    </Style>
+
+    <Style x:Key="GroupHeader" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="@Secondary@"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Margin" Value="14,18,0,7"/>
+    </Style>
+
+    <Style x:Key="Separator" TargetType="Border">
+      <Setter Property="Height" Value="1"/>
+      <Setter Property="Background" Value="@Separator@"/>
+      <Setter Property="Margin" Value="44,0,0,0"/>
+    </Style>
+
+    <Style x:Key="RowGlyph" TargetType="TextBlock">
+      <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+      <Setter Property="FontSize" Value="16"/>
+      <Setter Property="Foreground" Value="@Accent@"/>
+      <Setter Property="Width" Value="30"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 
     <Style x:Key="PrimaryButton" TargetType="Button">
-      <Setter Property="Foreground" Value="{StaticResource Parchment}"/>
-      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Foreground" Value="#FFFFFF"/>
+      <Setter Property="FontSize" Value="14"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
       <Setter Property="SnapsToDevicePixels" Value="True"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="bd" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Gold}">
-              <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                  <GradientStop Color="#A6392A" Offset="0"/>
-                  <GradientStop Color="#7E271D" Offset="1"/>
-                </LinearGradientBrush>
-              </Border.Background>
-              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Border x:Name="bd" CornerRadius="12" Background="@Accent@" RenderTransformOrigin="0.5,0.5">
+              <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
+              <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="#B84234"/>
+                <Setter TargetName="bd" Property="Background" Value="@AccentHover@"/>
               </Trigger>
               <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="#7E271D"/>
+                <Setter TargetName="bd" Property="Background" Value="@AccentPressed@"/>
+                <Trigger.EnterActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="0.97" Duration="@Fast@"/>
+                      <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="0.97" Duration="@Fast@"/>
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="@Med@">
+                        <DoubleAnimation.EasingFunction><ExponentialEase EasingMode="EaseOut" Exponent="6"/></DoubleAnimation.EasingFunction>
+                      </DoubleAnimation>
+                      <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="@Med@">
+                        <DoubleAnimation.EasingFunction><ExponentialEase EasingMode="EaseOut" Exponent="6"/></DoubleAnimation.EasingFunction>
+                      </DoubleAnimation>
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.ExitActions>
               </Trigger>
               <Trigger Property="IsEnabled" Value="False">
-                <Setter TargetName="bd" Property="Background" Value="#4A2420"/>
-                <Setter Property="Foreground" Value="#9A8266"/>
+                <Setter TargetName="bd" Property="Opacity" Value="0.5"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -92,29 +172,48 @@ $xaml = @'
       </Setter>
     </Style>
 
-    <Style x:Key="GhostButton" TargetType="Button">
-      <Setter Property="Foreground" Value="{StaticResource TextSoft}"/>
-      <Setter Property="FontSize" Value="13"/>
-      <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Cursor" Value="Hand"/>
+    <Style x:Key="SecondaryButton" TargetType="Button">
+      <Setter Property="Foreground" Value="@Label@"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="Medium"/>
+      <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
       <Setter Property="SnapsToDevicePixels" Value="True"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="bd" CornerRadius="8" BorderThickness="1"
-                    Background="{StaticResource Surface2}" BorderBrush="{StaticResource GoldDim}">
-              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Border x:Name="bd" CornerRadius="12" Background="@Fill@" RenderTransformOrigin="0.5,0.5">
+              <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
+              <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="#3A332B"/>
-                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Gold}"/>
+                <Setter TargetName="bd" Property="Background" Value="@FillHover@"/>
               </Trigger>
               <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="#272119"/>
+                <Setter TargetName="bd" Property="Background" Value="@FillPressed@"/>
+                <Trigger.EnterActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="0.97" Duration="@Fast@"/>
+                      <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="0.97" Duration="@Fast@"/>
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="@Med@">
+                        <DoubleAnimation.EasingFunction><ExponentialEase EasingMode="EaseOut" Exponent="6"/></DoubleAnimation.EasingFunction>
+                      </DoubleAnimation>
+                      <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="@Med@">
+                        <DoubleAnimation.EasingFunction><ExponentialEase EasingMode="EaseOut" Exponent="6"/></DoubleAnimation.EasingFunction>
+                      </DoubleAnimation>
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.ExitActions>
               </Trigger>
               <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Foreground" Value="#7A6B55"/>
+                <Setter TargetName="bd" Property="Opacity" Value="0.5"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -123,20 +222,23 @@ $xaml = @'
     </Style>
 
     <Style x:Key="ChromeButton" TargetType="Button">
-      <Setter Property="Foreground" Value="{StaticResource TextSoft}"/>
-      <Setter Property="FontSize" Value="13"/>
-      <Setter Property="Width" Value="40"/>
-      <Setter Property="Height" Value="30"/>
-      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Foreground" Value="@Secondary@"/>
+      <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+      <Setter Property="FontSize" Value="10"/>
+      <Setter Property="Width" Value="34"/>
+      <Setter Property="Height" Value="28"/>
+      <Setter Property="Margin" Value="4,0,0,0"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="bd" CornerRadius="6" Background="Transparent">
+            <Border x:Name="bd" CornerRadius="8" Background="Transparent">
               <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="#33FFFFFF"/>
+                <Setter TargetName="bd" Property="Background" Value="@Fill@"/>
+                <Setter Property="Foreground" Value="@Label@"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -148,12 +250,13 @@ $xaml = @'
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="bd" CornerRadius="6" Background="Transparent">
+            <Border x:Name="bd" CornerRadius="8" Background="Transparent">
               <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="#C0392B"/>
+                <Setter TargetName="bd" Property="Background" Value="@CloseHover@"/>
+                <Setter Property="Foreground" Value="#FFFFFF"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -161,30 +264,59 @@ $xaml = @'
       </Setter>
     </Style>
 
-    <Style x:Key="ThemedCheck" TargetType="CheckBox">
-      <Setter Property="Foreground" Value="{StaticResource Parchment}"/>
-      <Setter Property="FontSize" Value="12.5"/>
-      <Setter Property="Cursor" Value="Hand"/>
+    <Style x:Key="Switch" TargetType="CheckBox">
+      <Setter Property="Foreground" Value="@Label@"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="CheckBox">
-            <StackPanel Orientation="Horizontal">
-              <Border x:Name="box" Width="20" Height="20" CornerRadius="5"
-                      Background="{StaticResource Surface}" BorderBrush="{StaticResource Gold}"
-                      BorderThickness="1" VerticalAlignment="Center">
-                <TextBlock x:Name="tick" Text="&#10003;" FontSize="13" FontWeight="Bold"
-                           Foreground="{StaticResource Parchment}"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
-              </Border>
-              <ContentPresenter VerticalAlignment="Center" Margin="10,0,0,0"/>
-            </StackPanel>
+            <Grid Background="Transparent">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <ContentPresenter VerticalAlignment="Center"/>
+              <Grid Grid.Column="1" VerticalAlignment="Center">
+                <Border x:Name="ring" Margin="-3" CornerRadius="15" BorderThickness="2"
+                        BorderBrush="@FocusRing@" Visibility="Collapsed"/>
+                <Border x:Name="track" Width="40" Height="24" CornerRadius="12">
+                  <Border.Background><SolidColorBrush Color="@TrackOff@"/></Border.Background>
+                  <Ellipse x:Name="knob" Width="20" Height="20" Fill="#FFFFFF"
+                           HorizontalAlignment="Left" Margin="2,0,0,0">
+                    <Ellipse.RenderTransform><TranslateTransform/></Ellipse.RenderTransform>
+                    <Ellipse.Effect>
+                      <DropShadowEffect BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.25" Color="#000000"/>
+                    </Ellipse.Effect>
+                  </Ellipse>
+                </Border>
+              </Grid>
+            </Grid>
             <ControlTemplate.Triggers>
               <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="box" Property="Background" Value="{StaticResource Accent}"/>
-                <Setter TargetName="tick" Property="Visibility" Value="Visible"/>
+                <Trigger.EnterActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="knob" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="16" Duration="@Med@">
+                        <DoubleAnimation.EasingFunction><ExponentialEase EasingMode="EaseOut" Exponent="6"/></DoubleAnimation.EasingFunction>
+                      </DoubleAnimation>
+                      <ColorAnimation Storyboard.TargetName="track" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="@Accent@" Duration="@Med@"/>
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="knob" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="0" Duration="@Med@">
+                        <DoubleAnimation.EasingFunction><ExponentialEase EasingMode="EaseOut" Exponent="6"/></DoubleAnimation.EasingFunction>
+                      </DoubleAnimation>
+                      <ColorAnimation Storyboard.TargetName="track" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="@TrackOff@" Duration="@Med@"/>
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.ExitActions>
               </Trigger>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="box" Property="BorderBrush" Value="{StaticResource AccentHi}"/>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="ring" Property="Visibility" Value="Visible"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -193,171 +325,188 @@ $xaml = @'
     </Style>
   </Window.Resources>
 
-  <Border Margin="14" CornerRadius="16" BorderThickness="1" BorderBrush="{StaticResource Gold}">
-    <Border.Background>
-      <LinearGradientBrush StartPoint="0,0" EndPoint="0.4,1">
-        <GradientStop Color="#1B1613" Offset="0"/>
-        <GradientStop Color="#12100E" Offset="1"/>
-      </LinearGradientBrush>
-    </Border.Background>
-    <Border.Effect>
-      <DropShadowEffect BlurRadius="26" ShadowDepth="0" Opacity="0.75" Color="#000000"/>
-    </Border.Effect>
+  <Grid x:Name="Root" Margin="24" RenderTransformOrigin="0.5,0.5">
+    <Grid.RenderTransform><ScaleTransform/></Grid.RenderTransform>
 
-    <Grid>
-      <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="*"/>
-        <RowDefinition Height="Auto"/>
-      </Grid.RowDefinitions>
+    <!-- shadow lives on its own layer so the text above stays crisp -->
+    <Border CornerRadius="14" Background="@Bg@">
+      <Border.Effect>
+        <DropShadowEffect BlurRadius="32" ShadowDepth="8" Direction="270" Opacity="@ShadowOpacity@" Color="#000000"/>
+      </Border.Effect>
+    </Border>
 
-      <Grid x:Name="TitleBar" Grid.Row="0" Height="46" Background="Transparent">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto"/>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
-        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
-          <Border Width="22" Height="22" CornerRadius="6" Background="{StaticResource Accent}"
-                  BorderBrush="{StaticResource Gold}" BorderThickness="1">
-            <TextBlock Text="R" Foreground="{StaticResource Parchment}" FontWeight="Bold"
-                       FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-          </Border>
-          <TextBlock Text="RedM Cache Cleaner" Foreground="{StaticResource TextMuted}"
-                     FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0"/>
-        </StackPanel>
-        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
-          <Button x:Name="BtnMin" Style="{StaticResource ChromeButton}" Content="&#8211;"/>
-          <Button x:Name="BtnClose" Style="{StaticResource CloseButton}" Content="&#10005;"/>
-        </StackPanel>
-      </Grid>
+    <Border CornerRadius="14" Background="@Bg@" BorderBrush="@Hairline@" BorderThickness="1">
+      <StackPanel>
 
-      <Border Grid.Row="1" Margin="1,0,1,0">
-        <Border.Background>
-          <LinearGradientBrush StartPoint="0,0" EndPoint="1,0.6">
-            <GradientStop Color="#5E211B" Offset="0"/>
-            <GradientStop Color="#3A1512" Offset="1"/>
-          </LinearGradientBrush>
-        </Border.Background>
-        <Grid Margin="30,20,26,22">
+        <Grid x:Name="TitleBar" Height="40" Background="Transparent">
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
+            <Button x:Name="BtnMin" Style="{StaticResource ChromeButton}" Content="&#xE921;"/>
+            <Button x:Name="BtnClose" Style="{StaticResource CloseButton}" Content="&#xE8BB;"/>
+          </StackPanel>
+        </Grid>
+
+        <Grid x:Name="Header" Margin="28,0,28,4" Background="Transparent">
           <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
           </Grid.ColumnDefinitions>
-          <StackPanel Grid.Column="0">
-            <TextBlock Text="RedM Cache Cleaner" Foreground="{StaticResource Parchment}"
-                       FontSize="27" FontWeight="Bold"/>
+          <Image x:Name="HeaderIcon" Width="56" Height="56" Visibility="Collapsed"
+                 RenderOptions.BitmapScalingMode="HighQuality"/>
+          <Border x:Name="IconTile" Width="56" Height="56" CornerRadius="13">
+            <Border.Background>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="@AccentTop@" Offset="0"/>
+                <GradientStop Color="@AccentBottom@" Offset="1"/>
+              </LinearGradientBrush>
+            </Border.Background>
+            <TextBlock Text="&#xE74D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
+                       Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="16,0,12,0">
+            <TextBlock Text="RedM Cache Cleaner" FontFamily="Segoe UI Variable Display, Segoe UI"
+                       FontSize="24" FontWeight="SemiBold" Foreground="@Label@"/>
             <TextBlock Text="Clean RedM cache files safely for the current Windows user."
-                       Foreground="{StaticResource TextSoft}" FontSize="12.5" Margin="1,6,0,0"/>
+                       FontSize="13" Foreground="@Secondary@" Margin="0,2,0,0" TextWrapping="Wrap"/>
           </StackPanel>
-          <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
-            <Border Background="#3A1512" CornerRadius="14" Padding="14,6"
-                    BorderBrush="{StaticResource Gold}" BorderThickness="1">
-              <StackPanel Orientation="Horizontal">
-                <Ellipse Width="8" Height="8" Fill="#7BC96F" VerticalAlignment="Center"/>
-                <TextBlock x:Name="UserPill" Text="USER" Foreground="{StaticResource Parchment}"
-                           FontSize="11" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center"/>
-              </StackPanel>
-            </Border>
-            <TextBlock Text="Built by Slimm" Foreground="{StaticResource TextSoft}"
-                       FontSize="10" HorizontalAlignment="Right" Margin="0,8,2,0" Opacity="0.85"/>
-          </StackPanel>
+          <Border Grid.Column="2" VerticalAlignment="Center" CornerRadius="12" Padding="10,5" Background="@Fill@">
+            <StackPanel Orientation="Horizontal">
+              <Ellipse Width="7" Height="7" Fill="@Green@" VerticalAlignment="Center"/>
+              <TextBlock x:Name="UserPill" Text="user" FontSize="12" FontWeight="Medium" Foreground="@Label@"
+                         Margin="7,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Border>
         </Grid>
-      </Border>
-      <Border Grid.Row="1" Height="3" VerticalAlignment="Bottom" Margin="1,0,1,0" Background="#2A0F0C"/>
 
-      <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="26,22,26,4">
-        <StackPanel>
+        <StackPanel Margin="20,6,20,0">
 
-          <Border Style="{StaticResource Card}">
+          <TextBlock Text="Location" Style="{StaticResource GroupHeader}"/>
+          <Border Style="{StaticResource Group}">
             <StackPanel>
-              <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                <TextBlock Text="&#128193;" FontSize="13" VerticalAlignment="Center"/>
-                <TextBlock Text="TARGET DIRECTORY" Style="{StaticResource CardHeading}" Margin="8,0,0,0"/>
-              </StackPanel>
-              <Border Background="{StaticResource LogBg}" CornerRadius="6" Padding="12,9"
-                      BorderBrush="{StaticResource GoldDim}" BorderThickness="1">
-                <TextBlock x:Name="PathLabel" Text="path" Foreground="{StaticResource LogText}"
-                           FontFamily="Consolas" FontSize="12" TextTrimming="CharacterEllipsis"/>
-              </Border>
+              <Grid Margin="14,8,8,8">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="&#xE8B7;" Style="{StaticResource RowGlyph}"/>
+                <TextBlock x:Name="PathLabel" Grid.Column="1" Text="path" Foreground="@Label@" VerticalAlignment="Center"
+                           FontFamily="Cascadia Mono, Consolas" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,0,10,0"/>
+                <Button x:Name="BtnOpen" Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="Open Folder"
+                        Height="30" Padding="14,0" FontSize="12.5"/>
+              </Grid>
+              <Border Style="{StaticResource Separator}"/>
+              <Grid Margin="14,8,8,8">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="&#xE71B;" Style="{StaticResource RowGlyph}"/>
+                <TextBlock Grid.Column="1" Text="Launch from your desktop" Foreground="@Label@" VerticalAlignment="Center"/>
+                <Button x:Name="BtnShortcut" Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="Create Desktop Shortcut"
+                        Height="30" Padding="14,0" FontSize="12.5"/>
+              </Grid>
             </StackPanel>
           </Border>
 
-          <Border Style="{StaticResource Card}">
+          <TextBlock Text="Folders to clean" Style="{StaticResource GroupHeader}"/>
+          <Border Style="{StaticResource Group}">
             <StackPanel>
-              <TextBlock Text="CLEANUP OPTIONS" Style="{StaticResource CardHeading}"/>
-              <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSoft}" FontSize="12.5"
-                         Text="After you confirm, these folders are deleted:"/>
-              <StackPanel Orientation="Horizontal" Margin="0,10,0,4">
-                <Border Background="{StaticResource Surface2}" CornerRadius="6" Padding="10,5" Margin="0,0,8,0"
-                        BorderBrush="{StaticResource GoldDim}" BorderThickness="1">
-                  <TextBlock Text="cache" Foreground="{StaticResource TextSoft}" FontFamily="Consolas" FontSize="11.5"/>
-                </Border>
-                <Border Background="{StaticResource Surface2}" CornerRadius="6" Padding="10,5" Margin="0,0,8,0"
-                        BorderBrush="{StaticResource GoldDim}" BorderThickness="1">
-                  <TextBlock Text="server-cache" Foreground="{StaticResource TextSoft}" FontFamily="Consolas" FontSize="11.5"/>
-                </Border>
-                <Border Background="{StaticResource Surface2}" CornerRadius="6" Padding="10,5"
-                        BorderBrush="{StaticResource GoldDim}" BorderThickness="1">
-                  <TextBlock Text="server-cache-priv" Foreground="{StaticResource TextSoft}" FontFamily="Consolas" FontSize="11.5"/>
-                </Border>
+              <StackPanel Orientation="Horizontal" Height="40" Margin="14,0">
+                <TextBlock Text="&#xE8B7;" Style="{StaticResource RowGlyph}" Foreground="@Tertiary@"/>
+                <TextBlock Text="cache" Foreground="@Label@" VerticalAlignment="Center"/>
               </StackPanel>
-              <Border Height="1" Background="{StaticResource GoldDim}" Margin="0,14,0,14"/>
-              <CheckBox x:Name="NuiCheck" Style="{StaticResource ThemedCheck}" Content="Also delete nui-storage"/>
-              <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextMuted}" FontSize="11" Margin="30,6,0,0"
-                         Text="nui-storage can hold separate UI / browser data. You'll be asked to confirm this one separately."/>
+              <Border Style="{StaticResource Separator}"/>
+              <StackPanel Orientation="Horizontal" Height="40" Margin="14,0">
+                <TextBlock Text="&#xE8B7;" Style="{StaticResource RowGlyph}" Foreground="@Tertiary@"/>
+                <TextBlock Text="server-cache" Foreground="@Label@" VerticalAlignment="Center"/>
+              </StackPanel>
+              <Border Style="{StaticResource Separator}"/>
+              <StackPanel Orientation="Horizontal" Height="40" Margin="14,0">
+                <TextBlock Text="&#xE8B7;" Style="{StaticResource RowGlyph}" Foreground="@Tertiary@"/>
+                <TextBlock Text="server-cache-priv" Foreground="@Label@" VerticalAlignment="Center"/>
+              </StackPanel>
+              <Border Style="{StaticResource Separator}"/>
+              <Grid Height="44" Margin="14,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="&#xE7BA;" Style="{StaticResource RowGlyph}"/>
+                <CheckBox x:Name="NuiCheck" Grid.Column="1" Style="{StaticResource Switch}" Content="Also delete nui-storage"/>
+              </Grid>
             </StackPanel>
           </Border>
+          <TextBlock TextWrapping="Wrap" Foreground="@Secondary@" FontSize="12" LineHeight="17" Margin="14,7,14,0"
+                     Text="nui-storage can hold separate UI and browser data. You'll be asked to confirm this one separately."/>
 
-          <Grid Margin="0,2,0,14">
+          <Grid Margin="0,20,0,0">
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*"/>
-              <ColumnDefinition Width="12"/>
               <ColumnDefinition Width="Auto"/>
               <ColumnDefinition Width="10"/>
-              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <Button x:Name="BtnClean" Grid.Column="0" Height="48" Style="{StaticResource PrimaryButton}" Content="Clean RedM Cache"/>
-            <Button x:Name="BtnOpen" Grid.Column="2" Height="48" Width="150" Style="{StaticResource GhostButton}" Content="Open Folder"/>
-            <Button x:Name="BtnExit" Grid.Column="4" Height="48" Width="96" Style="{StaticResource GhostButton}" Content="Exit"/>
+            <Button x:Name="BtnExit" Grid.Column="0" Width="104" Height="44" Style="{StaticResource SecondaryButton}" Content="Exit"/>
+            <Button x:Name="BtnClean" Grid.Column="2" Height="44" Style="{StaticResource PrimaryButton}" Content="Clean RedM Cache"/>
           </Grid>
 
-          <Border Style="{StaticResource Card}" Margin="0">
-            <StackPanel>
-              <TextBlock Text="ACTIVITY LOG" Style="{StaticResource CardHeading}"/>
-              <Border Background="{StaticResource LogBg}" CornerRadius="6"
-                      BorderBrush="{StaticResource GoldDim}" BorderThickness="1">
-                <TextBox x:Name="LogBox" Height="128" Background="Transparent" BorderThickness="0"
-                         Foreground="{StaticResource LogText}" FontFamily="Consolas" FontSize="12"
-                         IsReadOnly="True" TextWrapping="NoWrap" Padding="12,10"
-                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
-              </Border>
-            </StackPanel>
+          <TextBlock Text="Activity" Style="{StaticResource GroupHeader}"/>
+          <Border Style="{StaticResource Group}">
+            <TextBox x:Name="LogBox" Height="100" Margin="4,6" Background="Transparent" BorderThickness="0"
+                     Foreground="@Secondary@" FontFamily="Cascadia Mono, Consolas" FontSize="11.5"
+                     IsReadOnly="True" TextWrapping="Wrap" Padding="8,4"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+              <TextBox.Resources>
+                <Style TargetType="ScrollBar">
+                  <Setter Property="Width" Value="8"/>
+                  <Setter Property="MinWidth" Value="8"/>
+                  <Setter Property="Template">
+                    <Setter.Value>
+                      <ControlTemplate TargetType="ScrollBar">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True" Orientation="{TemplateBinding Orientation}">
+                          <Track.Thumb>
+                            <Thumb>
+                              <Thumb.Template>
+                                <ControlTemplate TargetType="Thumb">
+                                  <Border Width="5" CornerRadius="2.5" Background="@Scroll@" HorizontalAlignment="Center"/>
+                                </ControlTemplate>
+                              </Thumb.Template>
+                            </Thumb>
+                          </Track.Thumb>
+                        </Track>
+                      </ControlTemplate>
+                    </Setter.Value>
+                  </Setter>
+                </Style>
+              </TextBox.Resources>
+            </TextBox>
           </Border>
-
         </StackPanel>
-      </ScrollViewer>
 
-      <Border Grid.Row="3" Height="34" CornerRadius="0,0,15,15" Background="#0E0C0A">
-        <Grid Margin="26,0">
-          <TextBlock Text="RedM Cache Cleaner" Foreground="{StaticResource TextMuted}" FontSize="10.5"
-                     VerticalAlignment="Center" Opacity="0.7"/>
-          <TextBlock Text="v2.0  &#8226;  Built by Slimm" Foreground="{StaticResource TextMuted}" FontSize="10.5"
-                     VerticalAlignment="Center" HorizontalAlignment="Right" Opacity="0.7"/>
+        <Grid Margin="34,16,34,16">
+          <TextBlock Text="Version 3.0" Foreground="@Tertiary@" FontSize="11" VerticalAlignment="Center"/>
+          <TextBlock Text="Built by Slimm" Foreground="@Tertiary@" FontSize="11"
+                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
         </Grid>
-      </Border>
 
-    </Grid>
-  </Border>
+      </StackPanel>
+    </Border>
+
+    <!-- dims the window while a confirmation is up -->
+    <Border x:Name="Scrim" CornerRadius="14" Background="@Scrim@" Opacity="0" IsHitTestVisible="False"/>
+  </Grid>
 </Window>
 '@
 
 # ================================================================== load window
-$reader = New-Object System.Xml.XmlNodeReader ([xml]$xaml)
+$reader = New-Object System.Xml.XmlNodeReader ([xml](Expand-Theme $xaml))
 $window = [Windows.Markup.XamlReader]::Load($reader)
 
+$script:Root  = $window.FindName('Root')
+$script:Scrim = $window.FindName('Scrim')
 $TitleBar  = $window.FindName('TitleBar')
+$Header    = $window.FindName('Header')
 $BtnMin    = $window.FindName('BtnMin')
 $BtnClose  = $window.FindName('BtnClose')
 $UserPill  = $window.FindName('UserPill')
@@ -366,10 +515,68 @@ $NuiCheck  = $window.FindName('NuiCheck')
 $BtnClean  = $window.FindName('BtnClean')
 $BtnOpen   = $window.FindName('BtnOpen')
 $BtnExit   = $window.FindName('BtnExit')
+$BtnShortcut = $window.FindName('BtnShortcut')
 $script:LogBox = $window.FindName('LogBox')
 
-$UserPill.Text  = "USER: $env:USERNAME"
+$UserPill.Text  = $env:USERNAME
 $PathLabel.Text = $script:TargetDir
+$PathLabel.ToolTip = $script:TargetDir
+
+# App icon: window/taskbar from the .ico, header tile from the .png.
+# If either file is missing, the built-in glyph tile stays.
+try {
+    if (Test-Path -LiteralPath $script:IconIco) {
+        $window.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create((New-Object System.Uri $script:IconIco))
+    }
+    if (Test-Path -LiteralPath $script:IconPng) {
+        $headerIcon = $window.FindName('HeaderIcon')
+        $headerIcon.Source = [System.Windows.Media.Imaging.BitmapFrame]::Create((New-Object System.Uri $script:IconPng))
+        $headerIcon.Visibility = 'Visible'
+        $window.FindName('IconTile').Visibility = 'Collapsed'
+    }
+}
+catch { }
+
+# ================================================================== motion
+# Animations start from the current on-screen value, so they can be
+# interrupted and reversed without a jump.
+function Start-Ease {
+    param($Target, $Property, [double]$To, [double]$Ms, [scriptblock]$Done, $From)
+    $anim = New-Object System.Windows.Media.Animation.DoubleAnimation
+    $anim.To = $To
+    if ($null -ne $From) { $anim.From = [double]$From }
+    $anim.Duration = New-Object System.Windows.Duration ([TimeSpan]::FromMilliseconds($Ms))
+    $anim.EasingFunction = $script:Ease
+    if ($Done) { $anim.Add_Completed($Done) }
+    $Target.BeginAnimation($Property, $anim)
+}
+
+function Start-Scale {
+    param($Target, [double]$To, [double]$Ms, $From)
+    if (-not $script:Motion) { return }
+    Start-Ease $Target.RenderTransform ([System.Windows.Media.ScaleTransform]::ScaleXProperty) $To $Ms -From $From
+    Start-Ease $Target.RenderTransform ([System.Windows.Media.ScaleTransform]::ScaleYProperty) $To $Ms -From $From
+}
+
+# Arrive and leave along the same path: scale + fade in, scale + fade out.
+function Show-Materialize {
+    param($Target, [double]$FromScale = 0.96)
+    Start-Ease $Target ([System.Windows.UIElement]::OpacityProperty) 1 260 -From 0
+    Start-Scale $Target 1 420 -From $FromScale
+}
+
+function Hide-Materialize {
+    param($Target, [scriptblock]$Done, [double]$ToScale = 0.96)
+    Start-Scale $Target $ToScale 160
+    Start-Ease $Target ([System.Windows.UIElement]::OpacityProperty) 0 160 $Done
+}
+
+$script:Closing = $false
+function Close-App {
+    if ($script:Closing) { return }
+    $script:Closing = $true
+    Hide-Materialize $script:Root { $window.Close() }
+}
 
 # ================================================================== helpers
 function Add-Log {
@@ -378,6 +585,14 @@ function Add-Log {
     $script:LogBox.AppendText("[$timestamp] $Message`r`n")
     $script:LogBox.ScrollToEnd()
     [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Close-ThemedDialog {
+    param([bool]$Value)
+    if ($script:DlgState.Closing) { return }
+    $script:DlgState.Closing = $true
+    $script:DlgState.Result  = $Value
+    Hide-Materialize ($script:Dlg.FindName('Root')) { $script:Dlg.Close() } 0.94
 }
 
 function Show-ThemedDialog {
@@ -390,78 +605,103 @@ function Show-ThemedDialog {
         [switch]$Danger
     )
 
-    $accentTop = if ($Danger) { '#B84234' } else { '#A6392A' }
-    $accentBot = '#7E271D'
-    if ($Mode -eq 'OK') { $iconGlyph = [char]0x2714 }
-    elseif ($Danger)    { $iconGlyph = [char]0x26A0 }
-    else                { $iconGlyph = [char]0x2753 }
+    # Icon tile: warning for problems, check for a finished job, trash for "delete these?"
+    if ($Danger) {
+        $iconGlyph = '&#xE7BA;'; $iconTop = '@AccentTop@'; $iconBottom = '@AccentBottom@'
+    }
+    elseif ($Mode -eq 'OK') {
+        $iconGlyph = '&#xE73E;'; $iconTop = '#3DDC68'; $iconBottom = '#248A3D'
+    }
+    else {
+        $iconGlyph = '&#xE74D;'; $iconTop = '@AccentTop@'; $iconBottom = '@AccentBottom@'
+    }
 
     $dxaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        SizeToContent="Height" Width="440" ResizeMode="NoResize"
-        WindowStartupLocation="CenterOwner" FontFamily="Segoe UI" ShowInTaskbar="False">
-  <Border Margin="14" CornerRadius="14" BorderThickness="1" BorderBrush="#8A6E4A">
-    <Border.Background>
-      <LinearGradientBrush StartPoint="0,0" EndPoint="0.4,1">
-        <GradientStop Color="#221C18" Offset="0"/>
-        <GradientStop Color="#17130F" Offset="1"/>
-      </LinearGradientBrush>
-    </Border.Background>
-    <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="0" Opacity="0.7" Color="#000000"/></Border.Effect>
-    <StackPanel Margin="26,24,26,22">
-      <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-        <Border Width="34" Height="34" CornerRadius="8" VerticalAlignment="Center">
+        SizeToContent="Height" Width="372" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" FontFamily="Segoe UI Variable Text, Segoe UI" ShowInTaskbar="False">
+  <Grid x:Name="Root" Margin="24" RenderTransformOrigin="0.5,0.5">
+    <Grid.RenderTransform><ScaleTransform/></Grid.RenderTransform>
+    <Border CornerRadius="14" Background="@Group@">
+      <Border.Effect>
+        <DropShadowEffect BlurRadius="32" ShadowDepth="10" Direction="270" Opacity="@ShadowOpacity@" Color="#000000"/>
+      </Border.Effect>
+    </Border>
+    <Border CornerRadius="14" Background="@Group@" BorderBrush="@Hairline@" BorderThickness="1">
+      <StackPanel Margin="24,26,24,20">
+        <Border Width="56" Height="56" CornerRadius="13" HorizontalAlignment="Center">
           <Border.Background>
             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-              <GradientStop Color="$accentTop" Offset="0"/>
-              <GradientStop Color="$accentBot" Offset="1"/>
+              <GradientStop Color="$iconTop" Offset="0"/>
+              <GradientStop Color="$iconBottom" Offset="1"/>
             </LinearGradientBrush>
           </Border.Background>
-          <TextBlock Text="$iconGlyph" FontSize="17" Foreground="#F2E4CC"
-                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          <TextBlock Text="$iconGlyph" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="26"
+                     Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
-        <TextBlock Text="$Title" Foreground="#F2E4CC" FontSize="16" FontWeight="SemiBold"
-                   VerticalAlignment="Center" Margin="14,0,0,0"/>
+        <TextBlock Text="$Title" FontFamily="Segoe UI Variable Display, Segoe UI" FontSize="16" FontWeight="SemiBold"
+                   Foreground="@Label@" TextAlignment="Center" TextWrapping="Wrap" Margin="0,16,0,0"/>
+        <TextBlock x:Name="Msg" FontSize="13" LineHeight="19" Foreground="@Secondary@"
+                   TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,22"/>
+        <UniformGrid x:Name="Btns" Rows="1"/>
       </StackPanel>
-      <TextBlock x:Name="Msg" Foreground="#E0CCAC" FontSize="12.5" TextWrapping="Wrap" Margin="2,0,0,20"/>
-      <StackPanel x:Name="Btns" Orientation="Horizontal" HorizontalAlignment="Right"/>
-    </StackPanel>
-  </Border>
+    </Border>
+  </Grid>
 </Window>
 "@
 
-    $dr  = New-Object System.Xml.XmlNodeReader ([xml]$dxaml)
+    $dr  = New-Object System.Xml.XmlNodeReader ([xml](Expand-Theme $dxaml))
     $dlg = [Windows.Markup.XamlReader]::Load($dr)
     $dlg.Owner = $window
     $dlg.FindName('Msg').Text = $Message
     $btns = $dlg.FindName('Btns')
 
+    $script:Dlg      = $dlg
+    $script:DlgState = @{ Result = $false; Closing = $false; Danger = [bool]$Danger }
+
     $mkButton = {
-        param($text, $primary, $value)
+        param($text, $primary, $value, $margin)
         $b = New-Object System.Windows.Controls.Button
         $b.Content  = $text
-        $b.Height   = 40
-        $b.MinWidth = 96
-        $b.Margin   = New-Object System.Windows.Thickness(10,0,0,0)
-        $b.Padding  = New-Object System.Windows.Thickness(16,0,16,0)
-        $b.Style    = if ($primary) { $window.Resources['PrimaryButton'] } else { $window.Resources['GhostButton'] }
+        $b.Height   = 36
+        $b.FontSize = 13
+        $b.Margin   = $margin
+        $b.Style    = if ($primary) { $window.Resources['PrimaryButton'] } else { $window.Resources['SecondaryButton'] }
         $b.Tag      = $value
-        $b.Add_Click({ $dlg.Tag = $this.Tag; $dlg.Close() }.GetNewClosure())
+        $b.Add_Click({ Close-ThemedDialog ([bool]$this.Tag) })
         $btns.Children.Add($b) | Out-Null
     }
 
+    # Cancel on the left, the action on the right.
     if ($Mode -eq 'OK') {
-        & $mkButton 'OK' $true $true
-    } else {
-        & $mkButton $NoText  $false $false
-        & $mkButton $YesText $true  $true
+        & $mkButton 'OK' $true $true (New-Object System.Windows.Thickness(0))
+    }
+    else {
+        & $mkButton $NoText  $false $false (New-Object System.Windows.Thickness(0,0,5,0))
+        & $mkButton $YesText $true  $true  (New-Object System.Windows.Thickness(5,0,0,0))
     }
 
-    $dlg.Tag = $false
+    # Esc cancels. Enter takes the action, except on a destructive prompt.
+    $dlg.Add_PreviewKeyDown({
+        if ($_.Key -eq 'Escape') {
+            Close-ThemedDialog $false
+            $_.Handled = $true
+        }
+        elseif ($_.Key -eq 'Return' -and -not $script:DlgState.Danger) {
+            Close-ThemedDialog $true
+            $_.Handled = $true
+        }
+    })
+
+    $dlg.Add_Loaded({ Show-Materialize ($script:Dlg.FindName('Root')) 0.94 })
+
+    Start-Ease $script:Scrim ([System.Windows.UIElement]::OpacityProperty) 1 220
     $dlg.ShowDialog() | Out-Null
-    return [bool]$dlg.Tag
+    Start-Ease $script:Scrim ([System.Windows.UIElement]::OpacityProperty) 0 220
+
+    return [bool]$script:DlgState.Result
 }
 
 function Remove-RedMFolder {
@@ -487,9 +727,10 @@ function Remove-RedMFolder {
 
 # ================================================================== events
 $TitleBar.Add_MouseLeftButtonDown({ $window.DragMove() })
+$Header.Add_MouseLeftButtonDown({ $window.DragMove() })
 $BtnMin.Add_Click({ $window.WindowState = 'Minimized' })
-$BtnClose.Add_Click({ $window.Close() })
-$BtnExit.Add_Click({ $window.Close() })
+$BtnClose.Add_Click({ Close-App })
+$BtnExit.Add_Click({ Close-App })
 
 $BtnOpen.Add_Click({
     if (Test-Path -LiteralPath $script:TargetDir) {
@@ -503,6 +744,36 @@ $BtnOpen.Add_Click({
     }
 })
 
+$BtnShortcut.Add_Click({
+    if (-not (Test-Path -LiteralPath $script:Launcher)) {
+        Show-ThemedDialog -Title 'Launcher Not Found' -Mode OK -Danger `
+            -Message "The shortcut needs 'RedM Cache Cleaner.vbs' in the same folder as this app:`n`n$script:AppDir" | Out-Null
+        Add-Log "ERROR: Launcher not found: $script:Launcher"
+        return
+    }
+    try {
+        $desktop = [Environment]::GetFolderPath('Desktop')
+        $lnkPath = Join-Path $desktop 'RedM Cache Cleaner.lnk'
+        $existed = Test-Path -LiteralPath $lnkPath
+        $shell   = New-Object -ComObject WScript.Shell
+        $lnk     = $shell.CreateShortcut($lnkPath)
+        $lnk.TargetPath       = Join-Path $env:WINDIR 'System32\wscript.exe'
+        $lnk.Arguments        = "`"$script:Launcher`""
+        $lnk.WorkingDirectory = $script:AppDir
+        $lnk.Description      = 'RedM Cache Cleaner'
+        if (Test-Path -LiteralPath $script:IconIco) { $lnk.IconLocation = "$script:IconIco,0" }
+        $lnk.Save()
+        if ($existed) { Add-Log "Updated desktop shortcut: $lnkPath" } else { Add-Log "Created desktop shortcut: $lnkPath" }
+        Show-ThemedDialog -Title 'Shortcut Created' -Mode OK `
+            -Message "RedM Cache Cleaner is now on your desktop.`n`nIf you move this app's folder, press the button again to update it." | Out-Null
+    }
+    catch {
+        Add-Log "ERROR: Could not create the desktop shortcut. $($_.Exception.Message)"
+        Show-ThemedDialog -Title 'Shortcut Not Created' -Mode OK -Danger `
+            -Message "Windows wouldn't create the desktop shortcut.`n`n$($_.Exception.Message)" | Out-Null
+    }
+})
+
 $BtnClean.Add_Click({
     if (-not (Test-Path -LiteralPath $script:TargetDir)) {
         Show-ThemedDialog -Title 'RedM Folder Not Found' -Mode OK -Danger `
@@ -511,12 +782,13 @@ $BtnClean.Add_Click({
         return
     }
 
-    $confirm = Show-ThemedDialog -Title 'Confirm Cleanup' -YesText 'Clean Now' -NoText 'Cancel' `
-        -Message "Delete these RedM cache folders?`n`n    cache`n    server-cache`n    server-cache-priv`n`nClose RedM first so files aren't locked."
+    $confirm = Show-ThemedDialog -Title 'Delete RedM cache folders?' -YesText 'Clean Now' -NoText 'Cancel' `
+        -Message "cache, server-cache and server-cache-priv will be deleted.`n`nClose RedM first so files aren't locked."
     if (-not $confirm) { Add-Log 'Operation cancelled by user.'; return }
 
     $BtnClean.IsEnabled = $false
     $BtnOpen.IsEnabled  = $false
+    $BtnClean.Content   = "Cleaning$([char]0x2026)"
     Add-Log 'Starting cleanup...'
 
     foreach ($folder in $script:CacheFolders) {
@@ -524,9 +796,9 @@ $BtnClean.Add_Click({
     }
 
     if ($NuiCheck.IsChecked) {
-        $nuiConfirm = Show-ThemedDialog -Title 'Confirm nui-storage Deletion' -Danger `
+        $nuiConfirm = Show-ThemedDialog -Title 'Also delete nui-storage?' -Danger `
             -YesText 'Delete It' -NoText 'Keep It' `
-            -Message "You selected nui-storage.`n`nThis can contain separate UI / browser storage data. Do you also want to delete the nui-storage folder?"
+            -Message "You selected nui-storage. It can contain separate UI and browser storage data."
         if ($nuiConfirm) { Remove-RedMFolder -FolderName $script:NuiFolder | Out-Null }
         else { Add-Log 'INFO: nui-storage folder was not deleted.' }
     }
@@ -538,9 +810,12 @@ $BtnClean.Add_Click({
     Show-ThemedDialog -Title 'Cleanup Complete' -Mode OK `
         -Message 'RedM cache cleanup finished successfully.' | Out-Null
 
+    $BtnClean.Content   = 'Clean RedM Cache'
     $BtnClean.IsEnabled = $true
     $BtnOpen.IsEnabled  = $true
 })
+
+$window.Add_Loaded({ Show-Materialize $script:Root })
 
 $window.Add_ContentRendered({
     Add-Log "Ready. Running as Windows user: $env:USERNAME"
