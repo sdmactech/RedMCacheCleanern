@@ -1,76 +1,110 @@
 # RedM Cache Cleaner App
 
 <p align="center">
-  <img src="assets/app-preview.svg" alt="RedM Cache Cleaner App preview" width="900">
+  <img src="app/RedM%20Cache%20Cleaner.png" alt="RedM Cache Cleaner icon" width="128">
 </p>
 
 <p align="center">
-  <strong>A clean Windows GUI utility for clearing RedM cache folders safely for the current Windows user.</strong>
+  <strong>A clean Windows app for clearing RedM cache folders safely for the current Windows user.</strong>
 </p>
 
 <p align="center">
-  <a href="https://github.com/sdmactech/RedMCacheCleanern/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/sdmactech/RedMCacheCleanern?label=release&color=8f2d20"></a>
-  <a href="https://github.com/sdmactech/RedMCacheCleanern/releases/latest"><img alt="Download ZIP" src="https://img.shields.io/badge/download-ZIP-f2e4cc?labelColor=4f1814"></a>
-  <img alt="Windows" src="https://img.shields.io/badge/platform-Windows-27221d?color=564533">
-  <img alt="Version 2.0" src="https://img.shields.io/badge/UI-v2.0-8f2d20">
+  <a href="https://github.com/sdmactech/RedMCacheCleanern/raw/main/dist/RedM%20Cache%20Cleaner%20App.zip"><img alt="Download ZIP" src="https://img.shields.io/badge/download-v3.0%20ZIP-c0392b?labelColor=1d1d1f"></a>
+  <img alt="Windows" src="https://img.shields.io/badge/platform-Windows-6e6e73">
+  <img alt="Version 3.0" src="https://img.shields.io/badge/version-3.0-c0392b">
+</p>
+
+<p align="center">
+  <img src="assets/v3-main.png" alt="RedM Cache Cleaner 3.0 in light and dark mode" width="900">
 </p>
 
 ---
 
-## What's new in 2.0
+## What's new in 3.0
 
-Version 2.0 is a full visual redesign with the **exact same functionality** as before. The interface was rebuilt from WinForms to a modern **WPF** layout with a refined Red Dead / RedM western theme:
+Version 3.0 is a full visual redesign built around Apple's design approach, with a RedM red accent so it still feels like a RedM tool. **What the app cleans hasn't changed.**
 
-- Frameless window with rounded corners, a drop shadow, and a leather-and-parchment palette
-- Redesigned header with a live "current user" status pill
-- Card-based layout for the target directory, cleanup options, and activity log
-- Folder names shown as tidy "chips," plus a custom-styled option toggle
-- Themed confirmation dialogs that match the app instead of the default gray Windows pop-ups
-- Same launchers, same script filename — nothing about installation or distribution changes
+**Look**
+- Clean grouped layout: **Location**, **Folders to clean** and **Activity**, each in its own rounded panel.
+- **Light and dark mode** follow your Windows app theme automatically.
+- New app icon: a western-style R getting wiped clean by a squeegee. It shows in the app, on the window and in the taskbar.
+- The **nui-storage** option is now an on/off switch.
 
-Nothing about *what* the app does has changed: same target folder, same folders cleaned, same double-confirmation for `nui-storage`.
+**Feel**
+- The window and dialogs fade and scale in, then leave the same way.
+- Buttons press in the moment you click them, and the switch slides.
+- The window dims behind any open confirmation.
+- If you've turned off animation effects in Windows, the app drops the scaling and sliding and keeps only gentle fades.
+
+**New: Create Desktop Shortcut**
+- One click puts a **RedM Cache Cleaner** shortcut, with the app icon, on your desktop.
+- If you move the app's folder later, press the button again to update the shortcut.
+
+**Dialogs**
+- Confirmations are centered alerts with a clear icon: trash to confirm a delete, a warning for nui-storage or problems, and a green check when cleanup is done.
+- **Esc** cancels and **Enter** confirms. Enter does nothing on the nui-storage delete prompt, so you can't delete it by accident.
+
+<p align="center">
+  <img src="assets/v3-dialogs.png" alt="RedM Cache Cleaner 3.0 confirmation dialogs" width="900">
+</p>
+
+---
+
+## Version history
+
+### 3.0: Apple-style redesign
+Covered above. New layout, light and dark mode, motion, app icon, and the desktop shortcut button.
+
+### 2.0: Western redesign
+2.0 rebuilt the original WinForms window in WPF with a Red Dead inspired theme:
+- A frameless window with rounded corners and a leather-and-parchment palette
+- A header with a "current user" status pill
+- Card-based sections for the target folder, cleanup options and activity log
+- Themed confirmation dialogs in place of the gray Windows pop-ups
+
+<p align="center">
+  <img src="assets/screenshot-main.png" alt="RedM Cache Cleaner 2.0 western theme" width="600">
+</p>
+
+### 1.0: Original release
+The first version: a simple WinForms window that cleans the RedM cache folders, with the same double confirmation for nui-storage that every version since has kept.
 
 ---
 
 ## Download
 
-Download the latest ZIP from the release page:
+**[Download the v3.0 ZIP](https://github.com/sdmactech/RedMCacheCleanern/raw/main/dist/RedM%20Cache%20Cleaner%20App.zip)**
 
-**[Download the latest release ZIP](https://github.com/sdmactech/RedMCacheCleanern/releases/latest)**
-
-If you want to view all releases, visit the **[Releases page](https://github.com/sdmactech/RedMCacheCleanern/releases)**.
+Extract the ZIP before running anything.
 
 ---
 
 ## What it does
 
-RedM Cache Cleaner App is a small Windows utility that helps RedM players clear common local cache folders without manually digging through `AppData`. The app automatically targets the Windows user who launches it by using the current user's local app data path.
+RedM Cache Cleaner helps RedM players clear common local cache folders without digging through `AppData`. It automatically targets the Windows user who launches it.
 
-By default, after confirmation, it can delete:
+After you confirm, it deletes:
 
 - `cache`
 - `server-cache`
 - `server-cache-priv`
 
-It also includes an optional checkbox to delete:
+There's also an optional switch to delete:
 
 - `nui-storage`
 
-Because `nui-storage` can contain separate UI/browser storage data, the app asks for a **second confirmation** before deleting it.
-
-<p align="center">
-  <img src="assets/confirmation-flow.svg" alt="Separate themed confirmation prompts" width="900">
-</p>
+Because `nui-storage` can hold separate UI/browser storage data, the app asks for a **second confirmation** before deleting it.
 
 ---
 
 ## How to use
 
 1. Double-click **`RedM Cache Cleaner.vbs`** to launch the app.
-2. Review the target RedM data folder shown in the app.
-3. Click **Clean RedM Cache**.
-4. Confirm the cleanup when prompted.
-5. If you selected **Also delete nui-storage**, confirm the second prompt if you still want to delete it.
+2. Optional: click **Create Desktop Shortcut** so you can launch it from your desktop next time.
+3. Check the RedM data folder shown under **Location**.
+4. Click **Clean RedM Cache**.
+5. Confirm the cleanup when prompted.
+6. If you turned on **Also delete nui-storage**, confirm the second prompt if you still want it deleted.
 
 > Close RedM before cleaning. If RedM is open, Windows may prevent some folders from being deleted.
 
@@ -81,8 +115,9 @@ Because `nui-storage` can contain separate UI/browser storage data, the app asks
 | File | Purpose |
 | --- | --- |
 | `RedM Cache Cleaner.vbs` | Main double-click launcher. Opens the app without leaving a console window visible. |
-| `redm_cache_cleaner_w_background_windows.bat` | Fallback launcher. Use this if the VBS launcher does not work on your computer. |
-| `support_redm_cleaner_Gps1.ps1` | The PowerShell **WPF** GUI app (v2.0). Keep this in the same folder as the launchers. |
+| `redm_cache_cleaner_w_background_windows.bat` | Fallback launcher. Use this if the VBS launcher doesn't work on your computer. |
+| `support_redm_cleaner_Gps1.ps1` | The PowerShell **WPF** app (v3.0). Keep it in the same folder as the launchers. |
+| `RedM Cache Cleaner.ico` / `.png` | The app icon, used by the window, the taskbar and the desktop shortcut. |
 | `support_cleanup_universal.bat` | Universal batch fallback/support script (console-based). |
 | `README.txt` | Simple offline instructions included with the ZIP. |
 
@@ -116,7 +151,7 @@ Try double-clicking:
 redm_cache_cleaner_w_background_windows.bat
 ```
 
-That launcher may show a console window briefly, but it launches the same app.
+That launcher keeps a console window open, so if something goes wrong you'll see the error there.
 
 ### Windows blocks the file
 
@@ -128,11 +163,15 @@ If PowerShell blocks the script, right-click the ZIP before extracting, choose *
 
 Make sure RedM has been installed and launched at least once for the current Windows user.
 
+### The desktop shortcut stopped working
+
+You probably moved or renamed the app's folder. Open the app from its new location and click **Create Desktop Shortcut** again.
+
 ---
 
 ## Notes for server communities
 
-This utility is meant to be simple enough to send to players who need a quick RedM cache reset. Share the release ZIP link with users and tell them to extract the ZIP before launching the app.
+This utility is meant to be simple enough to send to players who need a quick RedM cache reset. Share the download link and tell players to extract the ZIP before launching the app.
 
 ---
 

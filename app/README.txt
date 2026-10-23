@@ -1,11 +1,12 @@
 Created by Slimm
 
-RedM Cache Cleaner App - v2.0
+RedM Cache Cleaner App - v3.0
 =============================
 
 A clean Windows utility for clearing RedM cache folders for the Windows user
-who launches it. v2.0 is a full visual redesign (modern WPF interface, Red Dead
-inspired theme) with the exact same functionality as before.
+who launches it. v3.0 is an Apple-style redesign (light and dark mode, new app
+icon, smooth motion, RedM red accent) with the same cleanup as before, plus a
+"Create Desktop Shortcut" button.
 
 What it cleans
 --------------
@@ -14,17 +15,19 @@ After confirmation, the app can delete these RedM folders:
   - server-cache
   - server-cache-priv
 
-There is also an optional checkbox for deleting:
+There is also an optional switch for deleting:
   - nui-storage
 If nui-storage is selected, the app asks for a separate confirmation first.
 
 How to use
 ----------
 1. Double-click "RedM Cache Cleaner.vbs" to launch the app.
-2. Review the target RedM data folder shown in the app.
-3. Click "Clean RedM Cache".
-4. Confirm the cleanup when prompted.
-5. If you selected "Also delete nui-storage", confirm that second prompt.
+2. Optional: click "Create Desktop Shortcut" to launch it from your desktop
+   next time.
+3. Review the RedM data folder shown under Location.
+4. Click "Clean RedM Cache".
+5. Confirm the cleanup when prompted.
+6. If you turned on "Also delete nui-storage", confirm that second prompt.
 
 Included files
 --------------
@@ -34,6 +37,8 @@ redm_cache_cleaner_w_background_windows.bat
     Fallback launcher. Use if the VBS launcher does not work.
 support_redm_cleaner_Gps1.ps1
     The WPF GUI app. Keep it in the same folder as the launchers.
+RedM Cache Cleaner.ico / RedM Cache Cleaner.png
+    The app icon, used by the window, taskbar and desktop shortcut.
 support_cleanup_universal.bat
     Universal batch fallback / support script.
 
@@ -49,5 +54,8 @@ Properties, check Unblock if available, click Apply, then extract again.
 
 If the app says the RedM data directory was not found, make sure RedM has been
 installed and run at least once for the current Windows user.
+
+If the desktop shortcut stops working, you probably moved the app's folder.
+Open the app from its new location and click "Create Desktop Shortcut" again.
 
 Recommended: Close RedM before cleaning so files are not locked.
