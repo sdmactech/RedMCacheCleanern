@@ -1,12 +1,13 @@
 <#
-    RedM Cache Cleaner  -  v3.0
+    RedM Cache Cleaner  -  v3.0.1
     Clean Rounded Style redesign in WPF: grouped layout, system type, light/dark that
     follows the Windows app theme, eased motion, and a RedM red accent.
     Same functionality as v1/v2: cleans cache / server-cache / server-cache-priv
     (after confirmation) with an optional second-confirmed nui-storage delete,
     an "Open Folder" action, and an activity log.
-    v3.0 adds the app icon (header, window, taskbar) and a
-    "Create Desktop Shortcut" button.
+    v3.0 adds the app icon (header, window, taskbar).
+    v3.0.1 drops the hidden VBS launcher and the desktop shortcut button,
+    which Microsoft Defender flagged; launch with "RedM Cache Cleaner.bat".
 
     Original utility by Slimm.
 #>
@@ -23,7 +24,6 @@ $script:NuiFolder    = 'nui-storage'
 $script:AppDir       = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $script:IconIco      = Join-Path $script:AppDir 'RedM Cache Cleaner.ico'
 $script:IconPng      = Join-Path $script:AppDir 'RedM Cache Cleaner.png'
-$script:Launcher     = Join-Path $script:AppDir 'RedM Cache Cleaner.vbs'
 
 # ------------------------------------------------------------------ theme
 # Follow the Windows "app mode" setting (Settings > Personalization > Colors).
@@ -395,18 +395,6 @@ $xaml = @'
                 <Button x:Name="BtnOpen" Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="Open Folder"
                         Height="30" Padding="14,0" FontSize="12.5"/>
               </Grid>
-              <Border Style="{StaticResource Separator}"/>
-              <Grid Margin="14,8,8,8">
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="Auto"/>
-                  <ColumnDefinition Width="*"/>
-                  <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="&#xE71B;" Style="{StaticResource RowGlyph}"/>
-                <TextBlock Grid.Column="1" Text="Launch from your desktop" Foreground="@Label@" VerticalAlignment="Center"/>
-                <Button x:Name="BtnShortcut" Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="Create Desktop Shortcut"
-                        Height="30" Padding="14,0" FontSize="12.5"/>
-              </Grid>
             </StackPanel>
           </Border>
 
@@ -485,7 +473,7 @@ $xaml = @'
         </StackPanel>
 
         <Grid Margin="34,16,34,16">
-          <TextBlock Text="Version 3.0" Foreground="@Tertiary@" FontSize="11" VerticalAlignment="Center"/>
+          <TextBlock Text="Version 3.0.1" Foreground="@Tertiary@" FontSize="11" VerticalAlignment="Center"/>
           <TextBlock Text="Built by Slimm" Foreground="@Tertiary@" FontSize="11"
                      VerticalAlignment="Center" HorizontalAlignment="Right"/>
         </Grid>
@@ -515,7 +503,6 @@ $NuiCheck  = $window.FindName('NuiCheck')
 $BtnClean  = $window.FindName('BtnClean')
 $BtnOpen   = $window.FindName('BtnOpen')
 $BtnExit   = $window.FindName('BtnExit')
-$BtnShortcut = $window.FindName('BtnShortcut')
 $script:LogBox = $window.FindName('LogBox')
 
 $UserPill.Text  = $env:USERNAME
@@ -741,36 +728,6 @@ $BtnOpen.Add_Click({
         Show-ThemedDialog -Title 'Folder Not Found' -Mode OK -Danger `
             -Message "RedM data directory was not found:`n`n$script:TargetDir" | Out-Null
         Add-Log "ERROR: RedM data directory not found: $script:TargetDir"
-    }
-})
-
-$BtnShortcut.Add_Click({
-    if (-not (Test-Path -LiteralPath $script:Launcher)) {
-        Show-ThemedDialog -Title 'Launcher Not Found' -Mode OK -Danger `
-            -Message "The shortcut needs 'RedM Cache Cleaner.vbs' in the same folder as this app:`n`n$script:AppDir" | Out-Null
-        Add-Log "ERROR: Launcher not found: $script:Launcher"
-        return
-    }
-    try {
-        $desktop = [Environment]::GetFolderPath('Desktop')
-        $lnkPath = Join-Path $desktop 'RedM Cache Cleaner.lnk'
-        $existed = Test-Path -LiteralPath $lnkPath
-        $shell   = New-Object -ComObject WScript.Shell
-        $lnk     = $shell.CreateShortcut($lnkPath)
-        $lnk.TargetPath       = Join-Path $env:WINDIR 'System32\wscript.exe'
-        $lnk.Arguments        = "`"$script:Launcher`""
-        $lnk.WorkingDirectory = $script:AppDir
-        $lnk.Description      = 'RedM Cache Cleaner'
-        if (Test-Path -LiteralPath $script:IconIco) { $lnk.IconLocation = "$script:IconIco,0" }
-        $lnk.Save()
-        if ($existed) { Add-Log "Updated desktop shortcut: $lnkPath" } else { Add-Log "Created desktop shortcut: $lnkPath" }
-        Show-ThemedDialog -Title 'Shortcut Created' -Mode OK `
-            -Message "RedM Cache Cleaner is now on your desktop.`n`nIf you move this app's folder, press the button again to update it." | Out-Null
-    }
-    catch {
-        Add-Log "ERROR: Could not create the desktop shortcut. $($_.Exception.Message)"
-        Show-ThemedDialog -Title 'Shortcut Not Created' -Mode OK -Danger `
-            -Message "Windows wouldn't create the desktop shortcut.`n`n$($_.Exception.Message)" | Out-Null
     }
 })
 
