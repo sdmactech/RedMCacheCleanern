@@ -22,7 +22,7 @@
 
 ## What's new in 3.0
 
-Version 3.0 is a full visual redesign built around Apple's design approach, with a RedM red accent so it still feels like a RedM tool. **What the app cleans hasn't changed.**
+Version 3.0 is a full visual redesign in a Clean Rounded Style, with a RedM red accent so it still feels like a RedM tool. **What the app cleans hasn't changed.**
 
 **Look**
 - Clean grouped layout: **Location**, **Folders to clean** and **Activity**, each in its own rounded panel.
@@ -52,7 +52,7 @@ Version 3.0 is a full visual redesign built around Apple's design approach, with
 
 ## Version history
 
-### 3.0: Apple-style redesign
+### 3.0: Clean Rounded Style redesign
 Covered above. New layout, light and dark mode, motion, app icon, and the desktop shortcut button.
 
 ### 2.0: Western redesign

@@ -4,9 +4,9 @@ RedM Cache Cleaner App - v3.0
 =============================
 
 A clean Windows utility for clearing RedM cache folders for the Windows user
-who launches it. v3.0 is an Apple-style redesign (light and dark mode, new app
-icon, smooth motion, RedM red accent) with the same cleanup as before, plus a
-"Create Desktop Shortcut" button.
+who launches it. v3.0 is a Clean Rounded Style redesign (light and dark mode,
+new app icon, smooth motion, RedM red accent) with the same cleanup as before,
+plus a "Create Desktop Shortcut" button.
 
 What it cleans
 --------------

@@ -1,6 +1,6 @@
 <#
     RedM Cache Cleaner  -  v3.0
-    Apple-style redesign in WPF: grouped layout, system type, light/dark that
+    Clean Rounded Style redesign in WPF: grouped layout, system type, light/dark that
     follows the Windows app theme, eased motion, and a RedM red accent.
     Same functionality as v1/v2: cleans cache / server-cache / server-cache-priv
     (after confirmation) with an optional second-confirmed nui-storage delete,
