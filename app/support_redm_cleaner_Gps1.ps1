@@ -5,6 +5,8 @@
     Same functionality as v1/v2: cleans cache / server-cache / server-cache-priv
     (after confirmation) with an optional second-confirmed nui-storage delete,
     an "Open Folder" action, and an activity log.
+    v3.0 adds the app icon (header, window, taskbar) and a
+    "Create Desktop Shortcut" button.
 
     Original utility by Slimm.
 #>
@@ -18,6 +20,10 @@ Add-Type -AssemblyName System.Windows.Forms   # used only for DoEvents in the lo
 $script:TargetDir    = Join-Path $env:LOCALAPPDATA 'RedM\RedM.app\data'
 $script:CacheFolders = @('cache', 'server-cache', 'server-cache-priv')
 $script:NuiFolder    = 'nui-storage'
+$script:AppDir       = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+$script:IconIco      = Join-Path $script:AppDir 'RedM Cache Cleaner.ico'
+$script:IconPng      = Join-Path $script:AppDir 'RedM Cache Cleaner.png'
+$script:Launcher     = Join-Path $script:AppDir 'RedM Cache Cleaner.vbs'
 
 # ------------------------------------------------------------------ theme
 # Follow the Windows "app mode" setting (Settings > Personalization > Colors).
@@ -345,7 +351,9 @@ $xaml = @'
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
           </Grid.ColumnDefinitions>
-          <Border Width="56" Height="56" CornerRadius="13">
+          <Image x:Name="HeaderIcon" Width="56" Height="56" Visibility="Collapsed"
+                 RenderOptions.BitmapScalingMode="HighQuality"/>
+          <Border x:Name="IconTile" Width="56" Height="56" CornerRadius="13">
             <Border.Background>
               <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                 <GradientStop Color="@AccentTop@" Offset="0"/>
@@ -374,18 +382,32 @@ $xaml = @'
 
           <TextBlock Text="Location" Style="{StaticResource GroupHeader}"/>
           <Border Style="{StaticResource Group}">
-            <Grid Margin="14,8,8,8">
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-              </Grid.ColumnDefinitions>
-              <TextBlock Text="&#xE8B7;" Style="{StaticResource RowGlyph}"/>
-              <TextBlock x:Name="PathLabel" Grid.Column="1" Text="path" Foreground="@Label@" VerticalAlignment="Center"
-                         FontFamily="Cascadia Mono, Consolas" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,0,10,0"/>
-              <Button x:Name="BtnOpen" Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="Open Folder"
-                      Height="30" Padding="14,0" FontSize="12.5"/>
-            </Grid>
+            <StackPanel>
+              <Grid Margin="14,8,8,8">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="&#xE8B7;" Style="{StaticResource RowGlyph}"/>
+                <TextBlock x:Name="PathLabel" Grid.Column="1" Text="path" Foreground="@Label@" VerticalAlignment="Center"
+                           FontFamily="Cascadia Mono, Consolas" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,0,10,0"/>
+                <Button x:Name="BtnOpen" Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="Open Folder"
+                        Height="30" Padding="14,0" FontSize="12.5"/>
+              </Grid>
+              <Border Style="{StaticResource Separator}"/>
+              <Grid Margin="14,8,8,8">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="&#xE71B;" Style="{StaticResource RowGlyph}"/>
+                <TextBlock Grid.Column="1" Text="Launch from your desktop" Foreground="@Label@" VerticalAlignment="Center"/>
+                <Button x:Name="BtnShortcut" Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="Create Desktop Shortcut"
+                        Height="30" Padding="14,0" FontSize="12.5"/>
+              </Grid>
+            </StackPanel>
           </Border>
 
           <TextBlock Text="Folders to clean" Style="{StaticResource GroupHeader}"/>
@@ -493,11 +515,27 @@ $NuiCheck  = $window.FindName('NuiCheck')
 $BtnClean  = $window.FindName('BtnClean')
 $BtnOpen   = $window.FindName('BtnOpen')
 $BtnExit   = $window.FindName('BtnExit')
+$BtnShortcut = $window.FindName('BtnShortcut')
 $script:LogBox = $window.FindName('LogBox')
 
 $UserPill.Text  = $env:USERNAME
 $PathLabel.Text = $script:TargetDir
 $PathLabel.ToolTip = $script:TargetDir
+
+# App icon: window/taskbar from the .ico, header tile from the .png.
+# If either file is missing, the built-in glyph tile stays.
+try {
+    if (Test-Path -LiteralPath $script:IconIco) {
+        $window.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create((New-Object System.Uri $script:IconIco))
+    }
+    if (Test-Path -LiteralPath $script:IconPng) {
+        $headerIcon = $window.FindName('HeaderIcon')
+        $headerIcon.Source = [System.Windows.Media.Imaging.BitmapFrame]::Create((New-Object System.Uri $script:IconPng))
+        $headerIcon.Visibility = 'Visible'
+        $window.FindName('IconTile').Visibility = 'Collapsed'
+    }
+}
+catch { }
 
 # ================================================================== motion
 # Animations start from the current on-screen value, so they can be
@@ -703,6 +741,36 @@ $BtnOpen.Add_Click({
         Show-ThemedDialog -Title 'Folder Not Found' -Mode OK -Danger `
             -Message "RedM data directory was not found:`n`n$script:TargetDir" | Out-Null
         Add-Log "ERROR: RedM data directory not found: $script:TargetDir"
+    }
+})
+
+$BtnShortcut.Add_Click({
+    if (-not (Test-Path -LiteralPath $script:Launcher)) {
+        Show-ThemedDialog -Title 'Launcher Not Found' -Mode OK -Danger `
+            -Message "The shortcut needs 'RedM Cache Cleaner.vbs' in the same folder as this app:`n`n$script:AppDir" | Out-Null
+        Add-Log "ERROR: Launcher not found: $script:Launcher"
+        return
+    }
+    try {
+        $desktop = [Environment]::GetFolderPath('Desktop')
+        $lnkPath = Join-Path $desktop 'RedM Cache Cleaner.lnk'
+        $existed = Test-Path -LiteralPath $lnkPath
+        $shell   = New-Object -ComObject WScript.Shell
+        $lnk     = $shell.CreateShortcut($lnkPath)
+        $lnk.TargetPath       = Join-Path $env:WINDIR 'System32\wscript.exe'
+        $lnk.Arguments        = "`"$script:Launcher`""
+        $lnk.WorkingDirectory = $script:AppDir
+        $lnk.Description      = 'RedM Cache Cleaner'
+        if (Test-Path -LiteralPath $script:IconIco) { $lnk.IconLocation = "$script:IconIco,0" }
+        $lnk.Save()
+        if ($existed) { Add-Log "Updated desktop shortcut: $lnkPath" } else { Add-Log "Created desktop shortcut: $lnkPath" }
+        Show-ThemedDialog -Title 'Shortcut Created' -Mode OK `
+            -Message "RedM Cache Cleaner is now on your desktop.`n`nIf you move this app's folder, press the button again to update it." | Out-Null
+    }
+    catch {
+        Add-Log "ERROR: Could not create the desktop shortcut. $($_.Exception.Message)"
+        Show-ThemedDialog -Title 'Shortcut Not Created' -Mode OK -Danger `
+            -Message "Windows wouldn't create the desktop shortcut.`n`n$($_.Exception.Message)" | Out-Null
     }
 })
 
